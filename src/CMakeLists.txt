@@ -142,6 +142,11 @@ install(CODE "execute_process(COMMAND ${CMAKE_COMMAND}
     -DDIR=\$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR}/cmake
     -P ${PROJECT_SOURCE_DIR}/cmake/gen_mkldnn_compat_cmakes.cmake)")
 
+if (CMAKE_BUILD_TYPE STREQUAL "Debug")
+    set(postfix ${CMAKE_DEBUG_POSTFIX})
+else()
+    set(postfix "")
+endif()
 # Intel MKL-DNN compat libraries
 if (WIN32)
     if (NOT MINGW)
@@ -157,12 +162,12 @@ if (WIN32)
     endif()
     add_custom_target(compat_libs ALL
         ${CMAKE_COMMAND} -E copy
-        $<TARGET_FILE_DIR:${LIB_NAME}>/${prefix}dnnl.${ext}
-        $<TARGET_FILE_DIR:${LIB_NAME}>/${prefix}mkldnn.${ext}
+        $<TARGET_FILE_DIR:${LIB_NAME}>/${prefix}dnnl${postfix}.${ext}
+        $<TARGET_FILE_DIR:${LIB_NAME}>/${prefix}mkldnn${postfix}.${ext}
         # Workaround for MSB8065 warning.
         COMMAND ${CMAKE_COMMAND} -E touch "CMakeFiles/compat_libs"
         DEPENDS ${LIB_NAME})
-    install(FILES $<TARGET_FILE_DIR:${LIB_NAME}>/${prefix}mkldnn.${ext}
+    install(FILES $<TARGET_FILE_DIR:${LIB_NAME}>/${prefix}mkldnn${postfix}.${ext}
         DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
 else()
     if(DNNL_LIBRARY_TYPE STREQUAL "SHARED")
@@ -176,14 +181,14 @@ else()
         set_ternary(ext_and_ver APPLE "${ver}${ext}" "${ext}${ver}")
         get_property(lib_location TARGET ${LIB_NAME} PROPERTY LIBRARY_OUTPUT_DIRECTORY)
         if(lib_location)
-            set(compat_link "${lib_location}/libmkldnn${ext_and_ver}")
+            set(compat_link "${lib_location}/libmkldnn${postfix}${ext_and_ver}")
         else()
-            set(compat_link "${CMAKE_CURRENT_BINARY_DIR}/libmkldnn${ext_and_ver}")
+            set(compat_link "${CMAKE_CURRENT_BINARY_DIR}/libmkldnn${postfix}${ext_and_ver}")
         endif()
         add_custom_command(OUTPUT ${compat_link}
             # to make the next command work fine
             COMMAND ${CMAKE_COMMAND} -E remove -f ${compat_link}
-            COMMAND ${CMAKE_COMMAND} -E create_symlink libdnnl${ext_and_ver} ${compat_link}
+            COMMAND ${CMAKE_COMMAND} -E create_symlink libdnnl${postfix}${ext_and_ver} ${compat_link}
             DEPENDS ${LIB_NAME})
         add_custom_target(compat_libs${ver} ALL DEPENDS ${compat_link})
         install(FILES ${compat_link} DESTINATION ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
